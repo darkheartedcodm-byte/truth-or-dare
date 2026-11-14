@@ -159,21 +159,21 @@ label.tg{display:flex;gap:10px;align-items:center;font-size:15px}
 
   <section id="truth">
     <div class="wrap">
-      <div class="pnav"><button class="back" data-view="home">‹ Home</button><button class="swap" data-view="dare">Dare ›</button></div>
+      <div class="pnav"><button class="back" data-view="home">‹ Home</button><button class="swap" data-swap="dare">Dare ›</button></div>
       <h2>Truth</h2>
       <p class="who"></p>
       <div id="truth-card"></div>
-      <div class="row2"><button class="btn main" data-draw="truth">Draw a truth</button><button class="btn alt" data-next>Next player</button></div>
+      <div class="row2"><button class="btn main" data-done>Done · next player</button><button class="btn alt" data-again="truth">New truth</button></div>
     </div>
   </section>
 
   <section id="dare">
     <div class="wrap">
-      <div class="pnav"><button class="swap" data-view="truth">‹ Truth</button><button class="back" data-view="home">Home ›</button></div>
+      <div class="pnav"><button class="swap" data-swap="truth">‹ Truth</button><button class="back" data-view="home">Home ›</button></div>
       <h2>Dare</h2>
       <p class="who"></p>
       <div id="dare-card"></div>
-      <div class="row2"><button class="btn main" data-draw="dare">Draw a dare</button><button class="btn alt" data-next>Next player</button></div>
+      <div class="row2"><button class="btn main" data-done>Done · next player</button><button class="btn alt" data-again="dare">New dare</button></div>
     </div>
   </section>
 
@@ -223,9 +223,9 @@ function renderSetup(){
   $("#plist").innerHTML=names().map((n,i)=>`<div class="pl"><div class="row"><input type="text" maxlength="18" value="${esc(n)}" data-i="${i}" aria-label="Player ${i+1} name">${p&&names().length>2?`<button class="x" data-del="${i}" aria-label="Remove player">×</button>`:""}</div>${gpick((p?"p":"c")+i,(p?S.pg:S.cg)[i])}</div>`).join("")+(p&&S.party.length<10?'<button class="ghost" id="addp">+ Add player</button>':"")+(S.mode==="couples"?`<div class="lbl">Couple type</div><div class="pick">${["Straight","Gay","Lesbian","Bi","Other"].map(t=>`<button data-ct="${t}" class="${S.ct===t?"on":""}">${t}</button>`).join("")}</div>`:"");
 }
 function renderTurn(){
-  const on=S.mode==="online";camb();if(on)setTimeout(sync,0);const hw=$("#hwho");if(hw)hw.textContent=on&&!O.code?"Not in a game":"Up now: "+cur();
+  const on=S.mode==="online";camb();if(on)setTimeout(sync,0);const hw=$("#hwho");if(hw)hw.textContent=on&&!O.code?"Not in a game":"Up now: "+cur();if(on&&O.code){const cd=O.st.card,cn=cd?cd.n||0:0;if(cn!==(O.seen||0)){O.seen=cn;show(cd?cd.k:"home")}}
   $$(".who").forEach(w=>w.textContent=on&&!O.code?"Host or join a game on the first slide":"Up now: "+cur()+(on&&mine()?" (you)":"")+tag());
-  ["truth","dare"].forEach(k=>{const c=on&&O.st.card&&O.st.card.k===k?O.st.card:null;$("#"+k+"-card").innerHTML=`<small>${esc(cur())}</small><p>${esc(c?c.t:"Tap “Draw a "+k+"” to begin")}</p>`});
+  ["truth","dare"].forEach(k=>{const c=on&&O.st.card&&O.st.card.k===k?O.st.card:null;$("#"+k+"-card").innerHTML=`<small>${esc(cur())}</small><p>${esc(c?c.t:"Pick Truth or Dare on the home screen")}</p>`});
 }
 function renderCustom(){
   $("#bi").checked=S.builtin;
@@ -244,10 +244,18 @@ function draw(k){if(S.mode==="online")return odraw(k);
 const VIEWS=["s-players","truth","dare","custom","home"];
 function show(id){VIEWS.forEach(v=>$("#"+v).classList.toggle("on",v===id));pager.scrollTop=0}
 const go=i=>show(VIEWS[i]);
+function pickNow(k){
+  if(S.mode==="online"){if(!O.code){show("s-players");return}odraw(k);return}
+  show(k);draw(k);
+}
 function choose(k){
-  if(S.mode==="online"&&!O.code){show("s-players");return}
+  if(S.mode==="online"){pickNow(k);return}
   const hm=$("#home");hm.classList.add("go-"+k);
-  setTimeout(()=>{show(k);hm.classList.remove("go-"+k)},430);
+  setTimeout(()=>{show(k);hm.classList.remove("go-"+k);draw(k)},430);
+}
+function done(){
+  if(S.mode==="online"){onext();return}
+  S.turn=(S.turn+1)%names().length;save();renderTurn();show("home");
 }
 
 document.addEventListener("click",e=>{
@@ -255,7 +263,7 @@ document.addEventListener("click",e=>{
   const d=b.dataset;
   if(d.view)show(d.view);else if(d.choose)choose(d.choose);else if(d.lv)lvl(d.lv);else if(d.gv!==undefined)setg(d.gi,d.gv);else if(d.ct)setct(d.ct);else if(d.og!==undefined){S.mygender=S.mygender===d.og?"":d.og;save();renderSetup()}else if(d.m){S.mode=d.m;S.turn=0;save();all();show("s-players")}
   else if(d.go!==undefined)go(+d.go);
-  else if(d.draw)draw(d.draw);
+  else if(d.draw)draw(d.draw);else if("done" in d)done();else if(d.again)draw(d.again);else if(d.swap)pickNow(d.swap);
   else if("next" in d){if(S.mode==="online")onext();else{S.turn=(S.turn+1)%names().length;save();renderTurn()}}
   else if(d.del!==undefined){S.party.splice(+d.del,1);S.pg.splice(+d.del,1);S.turn=0;save();all()}
   else if(b.id==="copy")copyLink();else if(b.id==="qrb"){O.qr=!O.qr;renderSetup()}else if(b.id==="shr")shareLink();else if(b.id==="host")host();else if(b.id==="join")join();else if(b.id==="leave")leave();else if(b.id==="addp"){S.party.push("Player "+(S.party.length+1));save();all()}
@@ -335,7 +343,7 @@ function reset(){
   const cm=$("#cams");if(cm)cm.innerHTML="";document.body.classList.remove("hascam");
   if(O.es)O.es.close();
   if(O.room&&O.me){try{fetch(API+"/api/leave",{method:"POST",keepalive:true,headers:{"Content-Type":"application/json"},body:JSON.stringify({room:O.room,id:O.me})})}catch(e){}}
-  Object.assign(O,{st:{players:[],turn:0,card:null},host:false,me:null,room:null,es:null,code:"",status:"",stream:null});
+  Object.assign(O,{st:{players:[],turn:0,card:null},host:false,me:null,room:null,es:null,code:"",status:"",stream:null,seen:0});
 }
 addEventListener("pagehide",()=>{if(O.room&&O.me&&navigator.sendBeacon)navigator.sendBeacon(API+"/api/leave",new Blob([JSON.stringify({room:O.room,id:O.me})],{type:"application/json"}))});
 function pick(k){const a=poolOf(k);return a.length?a[Math.floor(Math.random()*a.length)]:"No prompts in this deck yet. Add your own on the last slide."}
@@ -379,7 +387,7 @@ function hdata(from,m){
     bc();return;
   }
   const cp=O.st.players[O.st.turn];if(!cp||cp.id!==from)return;
-  if(m.t==="draw"&&(m.k==="truth"||m.k==="dare")){O.st.card={k:m.k,t:pick(m.k)};bc()}
+  if(m.t==="draw"&&(m.k==="truth"||m.k==="dare")){O.st.cn=(O.st.cn||0)+1;O.st.card={k:m.k,t:pick(m.k),n:O.st.cn};bc()}
   else if(m.t==="next")adv();
 }
 function adv(){O.st.turn=(O.st.turn+1)%O.st.players.length;O.st.card=null;bc()}
@@ -398,13 +406,13 @@ async function join(){
   }catch(e){fail(e.message==="404"?"No game with that code.":e.message==="409"?"That game is full.":"Could not reach the game server.")}
 }
 function leave(){reset();renderSetup();renderTurn()}
-function toast(){$$(".who").forEach(w=>w.textContent="Not your turn yet");setTimeout(renderTurn,1400)}
+function toast(){$$(".who").forEach(w=>w.textContent="Not your turn yet");const hw=$("#hwho");if(hw)hw.textContent="Not your turn yet";setTimeout(renderTurn,1400)}
 function odraw(k){
   if(!O.code)return go(0);
   if(!mine())return toast();
-  if(O.host){O.st.card={k,t:pick(k)};bc()}else send(O.st.hostId,{t:"draw",k});
+  if(O.host){O.st.cn=(O.st.cn||0)+1;O.st.card={k,t:pick(k),n:O.st.cn};bc()}else send(O.st.hostId,{t:"draw",k});
 }
-function onext(){if(!O.code)return go(0);if(O.host)adv();else if(mine())send(O.st.hostId,{t:"next"})}
+function onext(){if(!O.code)return go(0);if(O.host)adv();else if(mine())send(O.st.hostId,{t:"next"});else toast()}
 
 /* ---------- live call: join the call, then switch camera and mic on or off ---------- */
 const nameOf=id=>{const p=O.st.players.find(p=>p.id===id);return p?p.name:"Player"};
