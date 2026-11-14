@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Truth or Dare</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#e10600">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Truth or Dare">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f3f5;--ink:#0d0d10;--muted:#6a6a74;--card:#fff;--line:#d9d9df;--red:#e10600;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141418;--ink:#f4f4f6;--muted:#9c9ca8;--card:#1e1e25;--line:#35353f}}
+:root[data-theme="dark"]{--bg:#141418;--ink:#f4f4f6;--muted:#9c9ca8;--card:#1e1e25;--line:#35353f}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+button{font:inherit;cursor:pointer;border:0;color:inherit;background:none}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+#pager{height:100%;overflow-y:auto;overscroll-behavior:contain}
+section{min-height:100%;position:relative;display:none;flex-direction:column;align-items:center;justify-content:center;padding:84px 22px 28px}
+section.on{display:flex}
+.wrap{width:100%;max-width:540px;display:flex;flex-direction:column;gap:18px;align-items:stretch}
+h1,h2{margin:0}
+.muted{color:var(--muted);margin:0}
+/* top bar and dots */
+#bar{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 0;pointer-events:none}
+.seg{display:inline-flex;background:#111;border:1px solid #ffffff30;border-radius:999px;padding:4px;gap:2px;pointer-events:auto}
+.seg button{padding:9px 20px;border-radius:999px;color:#c4c4cc;font-weight:600;font-size:14px;transition:background .2s,color .2s}
+.seg button.on{background:var(--red);color:#fff}
+#dots{position:fixed;right:10px;top:50%;transform:translateY(-50%);z-index:5;display:flex;flex-direction:column;gap:10px;background:#111;border:1px solid #ffffff30;padding:10px 6px;border-radius:999px}
+#dots button{width:8px;height:8px;border-radius:99px;background:#ffffff55;padding:0;transition:height .25s,background .25s}
+#dots button.on{height:22px;background:var(--red)}
+/* slide hint */
+.slide{position:absolute;bottom:calc(18px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:0;font-weight:600;font-size:13px;letter-spacing:.04em;padding:6px 18px}
+.slide span{font-size:26px;line-height:1;animation:bob 1.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(6px)}}
+@keyframes pop{from{opacity:0;transform:translateY(16px) scale(.97)}}
+.pop{animation:pop .35s ease}
+@media(prefers-reduced-motion:reduce){.slide span,.pop{animation:none}#pager{scroll-behavior:auto}}
+/* buttons */
+.btn{padding:17px 22px;border-radius:16px;font-weight:800;font-size:17px;width:100%;transition:transform .12s}
+.btn:active{transform:scale(.98)}
+.who{font-weight:600;font-size:15px;text-align:center}
+.row2{display:flex;gap:10px;flex-wrap:wrap}.row2 .btn{flex:1}.btn.sm{padding:14px 10px;font-size:15px}
+/* players */
+#s-players h1{font-family:Anton,Impact,sans-serif;font-size:clamp(48px,15vw,84px);line-height:.95;font-weight:400;letter-spacing:.01em}
+#s-players h1 i{font-style:normal;color:var(--red)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.row{display:flex;gap:8px}
+input[type=text],textarea{width:100%;font:inherit;font-size:16px;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+textarea{resize:vertical;min-height:84px}
+.x{width:46px;border-radius:12px;border:1px solid var(--line);font-size:22px;color:var(--muted)}
+.ghost{padding:13px;border:1.5px dashed var(--line);border-radius:12px;font-weight:600;color:var(--muted)}
+.red{background:var(--red);color:#fff}
+/* truth: white */
+#truth{background:#fff;color:#0a0a0a}
+#truth h2{font-family:"Playfair Display",Georgia,serif;font-style:italic;font-size:clamp(54px,17vw,96px);line-height:1}
+#truth .who{color:#555}
+#truth-card{background:#fff;border:1.5px solid #0a0a0a;border-radius:28px;padding:34px 26px;min-height:250px;display:flex;flex-direction:column;justify-content:center;gap:16px;text-align:center;box-shadow:0 30px 60px -24px rgba(0,0,0,.3)}
+#truth-card small{font-weight:800;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#6a6a6a}
+#truth-card p{margin:0;font-family:"Playfair Display",Georgia,serif;font-weight:700;font-size:clamp(25px,6.6vw,38px);line-height:1.22}
+#truth .btn.main{background:#0a0a0a;color:#fff}
+#truth .btn.alt{border:1.5px solid #0a0a0a;color:#0a0a0a}
+#truth .slide{color:#0a0a0a}
+/* dare: black and red */
+#dare{background:radial-gradient(120% 70% at 50% 0%,#3a0000 0%,#0a0000 55%,#000 100%);color:#fff}
+#dare h2{font-family:Anton,Impact,sans-serif;font-weight:400;text-transform:uppercase;font-size:clamp(64px,22vw,120px);line-height:.95;color:var(--red);text-shadow:0 0 40px #e1060088}
+#dare .who{color:#ff8a84}
+#dare-card{background:linear-gradient(160deg,#1c0000,#000);border:1.5px solid var(--red);border-radius:28px;padding:34px 26px;min-height:250px;display:flex;flex-direction:column;justify-content:center;gap:16px;text-align:center;box-shadow:0 0 0 1px #3a0000,0 0 60px #e1060055}
+#dare-card small{font-weight:800;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#ff4a42}
+#dare-card p{margin:0;font-family:Anton,Impact,sans-serif;font-weight:400;text-transform:uppercase;letter-spacing:.02em;font-size:clamp(27px,7.4vw,44px);line-height:1.14}
+#dare .btn.main{background:var(--red);color:#fff;box-shadow:0 10px 30px -8px #e10600aa}
+#dare .btn.alt{border:1.5px solid #e10600;color:#fff}
+#dare .slide{color:#fff}
+#bar{flex-wrap:wrap;gap:6px 8px}
+#callbar{display:inline-flex;gap:6px;pointer-events:auto}
+#callbar[hidden],#callbar button[hidden]{display:none}
+#callbar button{background:#111;border:1px solid #ffffff30;border-radius:999px;padding:0 14px;height:40px;color:#fff;font-weight:600;font-size:13px}
+#callbar .live{background:var(--red);border-color:var(--red)}
+#cams{position:fixed;top:calc(env(safe-area-inset-top,0px) + 106px);left:10px;right:44px;z-index:4;display:flex;gap:8px;overflow-x:auto;pointer-events:none}
+.tile{position:relative;flex:0 0 auto;width:72px;height:96px;border-radius:14px;overflow:hidden;border:2px solid var(--red);background:#000;box-shadow:0 6px 18px #0006}
+.tile video{width:100%;height:100%;object-fit:cover}
+#t-me video{transform:scaleX(-1)}
+.tile b{position:absolute;left:0;right:0;bottom:0;font-size:10px;padding:2px 4px;background:#000a;color:#fff;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.hasbar section{padding-top:132px}
+body.hascam section{padding-top:238px}
+.pl{display:flex;flex-direction:column;gap:6px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.gp button{padding:6px 14px;font-size:13px}
+/* split home */
+#home{padding:0;flex-direction:row;align-items:stretch;justify-content:stretch;overflow:hidden}
+.half{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:76px 8px 96px;transition:flex .42s ease,opacity .3s ease;overflow:hidden;text-align:center}
+body.hasbar #home .half{padding-top:122px}
+body.hascam #home .half{padding-top:228px}
+.half small{font-weight:600;font-size:14px;letter-spacing:.06em}
+.half .big{transition:transform .2s}
+.half:hover .big{transform:scale(1.04)}
+.half.t{background:#fff;color:#0a0a0a}
+.half.t .big{font-family:"Playfair Display",Georgia,serif;font-style:italic;font-weight:700;font-size:clamp(40px,11.5vw,118px);line-height:1}
+.half.t small{color:#666}
+.half.d{background:radial-gradient(120% 70% at 50% 0%,#3a0000 0%,#0a0000 55%,#000 100%);color:#fff}
+.half.d .big{font-family:Anton,Impact,sans-serif;font-weight:400;text-transform:uppercase;font-size:clamp(46px,13.5vw,130px);line-height:1;color:var(--red);text-shadow:0 0 40px #e1060088}
+.half.d small{color:#ff8a84}
+#home.go-truth .half.d,#home.go-dare .half.t{flex:0 1 0;opacity:0;padding-left:0;padding-right:0;pointer-events:none}
+.or{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;width:46px;height:46px;border-radius:50%;background:var(--red);color:#fff;font-style:normal;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;border:3px solid #fff;box-shadow:0 6px 20px #0006;transition:opacity .2s}
+#home[class*="go-"] .or{opacity:0}
+.hbar{position:absolute;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:3;display:flex;gap:6px;align-items:center;background:#111;border:1px solid #ffffff30;border-radius:999px;padding:6px;max-width:calc(100% - 16px);white-space:nowrap}
+.hbar span{color:#fff;font-size:13px;font-weight:600;padding:0 10px;max-width:34vw;overflow:hidden;text-overflow:ellipsis}
+.hbar button{background:#2a2a2a;color:#fff;border-radius:999px;padding:10px 14px;font-weight:600;font-size:13px}
+.pnav{display:flex;justify-content:space-between;gap:10px}
+.pnav button,.back{padding:9px 16px;border-radius:999px;font-weight:700;font-size:14px}
+.back{align-self:flex-start;border:1.5px solid currentColor}
+#truth .swap{background:#0a0a0a;color:#fff;border:1.5px solid #0a0a0a}
+#dare .swap{background:#fff;color:#0a0a0a}
+#truth .back{color:#0a0a0a}#dare .back{color:#fff}
+/* custom */
+#custom h2{font-family:Anton,Impact,sans-serif;font-weight:400;font-size:clamp(40px,12vw,64px);line-height:1}
+.pick{display:flex;gap:6px;flex-wrap:wrap}
+.pick button{padding:9px 16px;border-radius:999px;border:1px solid var(--line);font-weight:600;font-size:14px}
+.pick button.on{background:var(--red);border-color:var(--red);color:#fff}
+.lbl{font-weight:600;font-size:14px;color:var(--muted)}
+#clist{display:flex;flex-direction:column;gap:8px;max-height:30vh;overflow-y:auto}
+.item{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;font-size:15px}
+.item span{flex:1}.item b{font-size:12px;padding:3px 9px;border-radius:99px;color:#fff;background:#111}.item b.dare{background:var(--red)}
+.item em{font-size:12px;color:var(--muted);font-style:normal}
+.item .x{width:34px;height:34px;font-size:18px;padding:0}
+label.tg{display:flex;gap:10px;align-items:center;font-size:15px}
+#custom .slide{color:var(--ink)}
+</style>
+</head>
+<body>
+<header id="bar"><div class="seg" role="group" aria-label="Game mode"><button data-m="party">Players</button><button data-m="couples">Couples</button><button data-m="online">Online</button></div><div id="callbar" hidden><button id="callb">Join call</button><button id="camt" hidden>Camera off</button><button id="mict" hidden>Mic on</button></div></header>
+<div id="cams" aria-live="polite"></div>
+
+<main id="pager">
+  <section id="home" class="on">
+    <button class="half t" data-choose="truth" aria-label="Truth"><span class="big">Truth</span><small>Tell the truth</small></button>
+    <button class="half d" data-choose="dare" aria-label="Dare"><span class="big">Dare</span><small>Dare to do it</small></button>
+    <i class="or">or</i>
+    <div class="hbar"><span id="hwho"></span><button data-view="s-players">Players</button><button data-view="custom">Your own</button></div>
+  </section>
+
+  <section id="s-players">
+    <div class="wrap">
+      <button class="back" data-view="home" style="color:var(--ink)">‹ Home</button>
+      <h1>Truth<br>or <i>Dare</i></h1>
+      <p class="muted" id="modeinfo"></p>
+      <div class="pick" id="lvl" style="justify-content:center"><button data-lv="mild">Mild</button><button data-lv="spicy">Spicy 18+</button></div>
+      <div class="panel" id="plist"></div>
+      <button class="btn red" data-view="home">Start playing</button>
+    </div>
+  </section>
+
+  <section id="truth">
+    <div class="wrap">
+      <div class="pnav"><button class="back" data-view="home">‹ Home</button><button class="swap" data-view="dare">Dare ›</button></div>
+      <h2>Truth</h2>
+      <p class="who"></p>
+      <div id="truth-card"></div>
+      <div class="row2"><button class="btn main" data-draw="truth">Draw a truth</button><button class="btn alt" data-next>Next player</button></div>
+    </div>
+  </section>
+
+  <section id="dare">
+    <div class="wrap">
+      <div class="pnav"><button class="swap" data-view="truth">‹ Truth</button><button class="back" data-view="home">Home ›</button></div>
+      <h2>Dare</h2>
+      <p class="who"></p>
+      <div id="dare-card"></div>
+      <div class="row2"><button class="btn main" data-draw="dare">Draw a dare</button><button class="btn alt" data-next>Next player</button></div>
+    </div>
+  </section>
+
+  <section id="custom">
+    <div class="wrap">
+      <button class="back" data-view="home" style="color:var(--ink)">‹ Home</button>
+      <h2>Your own</h2>
+      <p class="muted">Write a truth or a dare and it joins the deck right away.</p>
+      <div class="panel">
+        <textarea id="ctext" maxlength="200" placeholder="Type your truth or dare here"></textarea>
+        <div class="lbl">Type</div>
+        <div class="pick" data-g="ck"><button class="on" data-v="truth">Truth</button><button data-v="dare">Dare</button></div>
+        <div class="lbl">Use in</div>
+        <div class="pick" data-g="cm"><button data-v="party">Players</button><button data-v="couples">Couples</button><button class="on" data-v="both">Both</button></div>
+        <button class="btn red" id="addc">Add to deck</button>
+      </div>
+      <label class="tg"><input type="checkbox" id="bi"> Use built-in prompts</label>
+      <div id="clist"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const DEF={
+truth:{
+party:["What is the most embarrassing thing you’ve done in public?","Who in this room would you swap lives with for a week?","What’s a lie you told that got out of hand?","What’s the last thing you searched on your phone?","What’s a secret talent nobody here knows about?","Who was your first crush?","What’s the worst gift you’ve ever received?","What do you pretend to like but secretly don’t?","What’s the pettiest reason you’ve stopped talking to someone?","If you had to delete one app forever, which would it be?","What’s your most irrational fear?","Who here would survive longest in a zombie apocalypse?","What’s a habit of yours you hope nobody notices?","What’s the biggest trouble you’ve ever been in?"],
+couples:["What was your first impression of me?","What’s a small thing I do that makes you smile?","When did you first realize you liked me?","What’s one thing you’d like us to do more often?","What’s your favorite memory of us so far?","What have you always wanted to tell me but haven’t?","What song reminds you of us?","Where is the dream trip you want us to take together?","What’s something I do that secretly annoys you, in a loving way?","Where do you see us in five years?","What’s the most romantic thing anyone has done for you?","What’s one thing you admire about me?"]},
+dare:{
+party:["Do your best impression of someone in the room until your next turn.","Speak in an accent until your next turn.","Show the group the most recent photo in your camera roll.","Do 15 jumping jacks while reciting the alphabet.","Balance a spoon on your nose for 10 seconds.","Dance with no music for 30 seconds.","Whisper everything you say until your next turn.","Do a runway walk across the room.","Let the group pick a nickname you must use all night.","Try to lick your elbow while everyone watches.","Sing any chorus as dramatically as you can.","Do an impression of an animal chosen by the player on your left.","Give a 20-second motivational speech about a random object nearby.","Text a friend “I know what you did” and show the reply."],
+couples:["Give your partner a 60-second shoulder massage.","Slow dance together with no music for one minute.","Whisper something sweet in your partner’s ear.","Recreate the pose from your first photo together.","Write a two-line love poem and read it aloud.","Hold eye contact for 30 seconds without laughing.","Feed your partner their favorite snack.","Give your partner one compliment for every finger on one hand.","Plan a surprise date night out loud, right now.","Do your best impression of your partner.","Hug for a full 20 seconds.","Send your partner a message as if you just met."]}};
+let S={mode:"party",party:["Player 1","Player 2","Player 3"],couple:["Me","My partner"],turn:0,builtin:true,custom:[],pg:[],cg:["",""],ct:"",level:"mild",adult:false,mygender:""};
+try{const r=localStorage.getItem("tod-v1");if(r)Object.assign(S,JSON.parse(r))}catch(e){}
+const save=()=>{try{localStorage.setItem("tod-v1",JSON.stringify(S))}catch(e){}};
+const O={st:{players:[],turn:0,card:null},host:false,me:null,room:null,es:null,code:"",status:"",stream:null};
+const names=()=>S.mode==="online"?O.st.players.map(p=>p.name):S.mode==="party"?S.party:S.couple;
+const cur=()=>{const n=names(),t=S.mode==="online"?O.st.turn:S.turn;return n[t%(n.length||1)]||"Player"};
+const G={ck:"truth",cm:"both"},last={};
+const pager=$("#pager");
+
+function renderSetup(){
+  $$(".seg button").forEach(b=>b.classList.toggle("on",b.dataset.m===S.mode));
+  $$("#lvl button").forEach(b=>b.classList.toggle("on",b.dataset.lv===S.level));$("#lvl").hidden=S.mode==="online"&&!!O.code&&!O.host;
+  $("#modeinfo").textContent=S.mode==="online"?"Host a game or join a friend with their code. Everyone plays on their own phone.":S.mode==="party"?"Add 2 to 10 players. Everyone takes turns drawing a truth or a dare.":"Two names, one deck made for the two of you.";
+  const p=S.mode==="party";if(S.mode==="online")return renderLobby();
+  $("#plist").innerHTML=names().map((n,i)=>`<div class="pl"><div class="row"><input type="text" maxlength="18" value="${esc(n)}" data-i="${i}" aria-label="Player ${i+1} name">${p&&names().length>2?`<button class="x" data-del="${i}" aria-label="Remove player">×</button>`:""}</div>${gpick((p?"p":"c")+i,(p?S.pg:S.cg)[i])}</div>`).join("")+(p&&S.party.length<10?'<button class="ghost" id="addp">+ Add player</button>':"")+(S.mode==="couples"?`<div class="lbl">Couple type</div><div class="pick">${["Straight","Gay","Lesbian","Bi","Other"].map(t=>`<button data-ct="${t}" class="${S.ct===t?"on":""}">${t}</button>`).join("")}</div>`:"");
+}
+function renderTurn(){
+  const on=S.mode==="online";camb();if(on)setTimeout(sync,0);const hw=$("#hwho");if(hw)hw.textContent=on&&!O.code?"Not in a game":"Up now: "+cur();
+  $$(".who").forEach(w=>w.textContent=on&&!O.code?"Host or join a game on the first slide":"Up now: "+cur()+(on&&mine()?" (you)":"")+tag());
+  ["truth","dare"].forEach(k=>{const c=on&&O.st.card&&O.st.card.k===k?O.st.card:null;$("#"+k+"-card").innerHTML=`<small>${esc(cur())}</small><p>${esc(c?c.t:"Tap “Draw a "+k+"” to begin")}</p>`});
+}
+function renderCustom(){
+  $("#bi").checked=S.builtin;
+  $("#clist").innerHTML=S.custom.length?S.custom.map((c,i)=>`<div class="item"><b class="${c.k}">${c.k}</b><span>${esc(c.t)}</span><em>${c.m==="both"?"both":c.m==="party"?"players":"couples"}</em><button class="x" data-ci="${i}" aria-label="Delete">×</button></div>`).join(""):'<p class="muted">Nothing yet. Your own truths and dares will show up here.</p>';
+}
+const all=()=>{renderSetup();renderTurn();renderCustom()};
+function draw(k){if(S.mode==="online")return odraw(k);
+  const pool=poolOf(k);
+  let t;
+  if(!pool.length)t="No prompts in this deck yet. Slide down and add your own.";
+  else{do{t=pool[Math.floor(Math.random()*pool.length)]}while(pool.length>1&&t===last[k]);last[k]=t}
+  const el=$("#"+k+"-card");
+  el.innerHTML=`<small>${esc(cur())}</small><p>${esc(t)}</p>`;
+  el.classList.remove("pop");void el.offsetWidth;el.classList.add("pop");
+}
+const VIEWS=["s-players","truth","dare","custom","home"];
+function show(id){VIEWS.forEach(v=>$("#"+v).classList.toggle("on",v===id));pager.scrollTop=0}
+const go=i=>show(VIEWS[i]);
+function choose(k){
+  if(S.mode==="online"&&!O.code){show("s-players");return}
+  const hm=$("#home");hm.classList.add("go-"+k);
+  setTimeout(()=>{show(k);hm.classList.remove("go-"+k)},430);
+}
+
+document.addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  const d=b.dataset;
+  if(d.view)show(d.view);else if(d.choose)choose(d.choose);else if(d.lv)lvl(d.lv);else if(d.gv!==undefined)setg(d.gi,d.gv);else if(d.ct)setct(d.ct);else if(d.og!==undefined){S.mygender=S.mygender===d.og?"":d.og;save();renderSetup()}else if(d.m){S.mode=d.m;S.turn=0;save();all();show("s-players")}
+  else if(d.go!==undefined)go(+d.go);
+  else if(d.draw)draw(d.draw);
+  else if("next" in d){if(S.mode==="online")onext();else{S.turn=(S.turn+1)%names().length;save();renderTurn()}}
+  else if(d.del!==undefined){S.party.splice(+d.del,1);S.pg.splice(+d.del,1);S.turn=0;save();all()}
+  else if(b.id==="copy")copyLink();else if(b.id==="qrb"){O.qr=!O.qr;renderSetup()}else if(b.id==="shr")shareLink();else if(b.id==="host")host();else if(b.id==="join")join();else if(b.id==="leave")leave();else if(b.id==="addp"){S.party.push("Player "+(S.party.length+1));save();all()}
+  else if(d.ci!==undefined){S.custom.splice(+d.ci,1);save();renderCustom()}
+  else if(b.closest(".pick")){const g=b.closest(".pick");G[g.dataset.g]=d.v;[...g.children].forEach(c=>c.classList.toggle("on",c===b))}
+  else if(b.id==="addc"){
+    const ta=$("#ctext"),t=ta.value.trim();
+    if(!t){ta.focus();return}
+    S.custom.unshift({k:G.ck,m:G.cm,t});ta.value="";save();renderCustom();
+  }
+});
+$("#plist").addEventListener("input",e=>{
+  const i=e.target.dataset.i;if(i===undefined)return;
+  names()[+i]=e.target.value.trim()||"Player "+(+i+1);save();
+  $$(".who").forEach(w=>w.textContent="Up now: "+cur());
+});
+$("#bi").addEventListener("change",e=>{S.builtin=e.target.checked;save()});
+$("#plist").addEventListener("change",e=>{if(e.target.id==="oadult"){S.adult=e.target.checked;save()}});
+
+/* ---------- spicy 18+ prompts: flirty and suggestive, never explicit ---------- */
+const SP={
+truth:{
+any:["What’s the most daring thing you’ve done to impress someone you liked?","What’s your biggest turn-on that you rarely admit out loud?","Who in this group would you most want to be stuck in an elevator with, and why?","What’s the wildest place you’ve ever kissed someone?","What’s the most embarrassing thing that has happened to you in a romantic moment?","What’s the boldest flirting move you’ve ever tried?","What’s one rumor about you that is actually true?"],
+boys:["What’s the corniest line you’ve ever used to impress someone?","What do you secretly love when someone else makes the first move?","What’s the most confident you’ve ever felt in front of a crush?"],
+girls:["What’s the best compliment a crush has ever given you?","What’s the most attractive thing someone can do without realizing it?","What’s the boldest thing you’ve ever done to get a crush’s attention?"],
+mixed:["What’s one thing you find attractive about the opposite gender that surprises people?","What’s a dating myth about the opposite gender you used to believe?","What’s the biggest difference between how guys and girls flirt?"],
+cany:["What’s something you find irresistible about me?","Where is the most adventurous place you’d like to kiss me?","What’s a fantasy date night you’d love us to try?","What outfit of mine drives you crazy?","What’s one thing you’d love me to do more when we’re alone?","What’s the most romantic dream you’ve had about us?"],
+mf:["What’s your favorite way I kiss you?","What’s one thing I do that instantly makes you melt?"],
+mm:["What do you find most attractive about my confidence?","What’s your favorite thing about how we kiss?"],
+ff:["What do you find most attractive about my style?","What’s your favorite thing about how we kiss?"],
+bi:["When did you first realize you’re attracted to more than one gender?","Who was your first crush on someone of the same gender?","What’s something people assume about bi people that you’d like to correct?"]},
+dare:{
+any:["Say the flirtiest thing you can think of to the player on your right.","Do your sexiest walk across the room like it’s a runway.","Read a grocery list in your most seductive voice.","Give the player on your left a 20-second flirty compliment.","Describe your ideal date as a dramatic romance-novel narrator.","Hold a smoldering look for 10 seconds without laughing."],
+boys:["Flex and strike your most confident pose for 10 seconds.","Do a slow-motion hair flip like a shampoo commercial.","Deliver your smoothest pickup line to the player of your choice."],
+girls:["Strike three model poses with maximum confidence.","Do a slow-motion hair flip like a shampoo commercial.","Deliver your best smoky “hey there” to the player of your choice."],
+mixed:["Pick someone of the opposite gender and tell them the most charming thing you can think of.","Give the player across from you your best flirty look for 10 seconds without laughing.","Slow dance with a player of your choice, only if you both want to."],
+cany:["Give your partner a slow 15-second kiss.","Whisper something steamy in your partner’s ear.","Slow dance close together for one full minute.","Give your partner a slow neck-and-shoulder massage for 60 seconds.","Kiss your partner somewhere other than the lips.","In your sexiest voice, tell your partner three things you love about them.","Text your partner the flirtiest message you can, while they watch you write it."],
+mf:["Feed your partner a snack as seductively as you can.","Let your partner pick one thing you’re wearing to swap with theirs for the rest of the game."],
+mm:["Slow dance, chest to chest, for 30 seconds.","Tell your partner the thing you love most about how he looks tonight."],
+ff:["Slow dance, close together, for 30 seconds.","Tell your partner the thing you love most about how she looks tonight."],
+bi:["Tell your partner something you find attractive about them that you’ve never said out loud."]}};
+const grp=gs=>{gs=gs.filter(Boolean);return !gs.length?"any":gs.every(g=>g==="boy")?"boys":gs.every(g=>g==="girl")?"girls":"mixed"};
+function poolOf(k){
+  const on=S.mode==="online",m=on?"party":S.mode;
+  const sp=S.level==="spicy"&&(on?O.st.players.every(p=>p.a):S.adult);
+  let a=S.builtin?DEF[k][m].slice():[];
+  if(sp){
+    const X=SP[k];
+    if(m==="couples"){const g1=S.cg[0],g2=S.cg[1],pr=g1&&g2?(g1===g2?(g1==="boy"?"mm":"ff"):"mf"):"";a=a.concat(X.cany,X[pr]||[],S.ct==="Bi"?X.bi:[])}
+    else{const gk=grp(on?O.st.players.map(p=>p.g):S.party.map((_,i)=>S.pg[i]||""));a=a.concat(X.any,gk==="any"?[]:X[gk])}
+  }
+  return a.concat(S.custom.filter(c=>c.k===k&&(c.m===m||c.m==="both")).map(c=>c.t));
+}
+const gpick=(id,v)=>`<div class="pick gp">${[["boy","Boy"],["girl","Girl"]].map(([k,l])=>`<button data-gi="${id}" data-gv="${k}" class="${v===k?"on":""}">${l}</button>`).join("")}</div>`;
+function lvl(v){
+  if(v==="spicy"&&!S.adult){if(!confirm("Spicy mode has flirty adult themes and is for people 18 and older. Everyone playing must be 18+ and comfortable. Anyone can pass any prompt. Continue?"))return;S.adult=true}
+  S.level=v;save();renderSetup();renderTurn();
+}
+function setg(id,v){const a=id[0]==="p"?S.pg:S.cg,i=+id.slice(1);a[i]=a[i]===v?"":v;save();renderSetup();renderTurn()}
+function setct(t){S.ct=S.ct===t?"":t;save();renderSetup()}
+const tag=()=>{const s=S.mode==="online"?O.st.sp:S.level==="spicy"&&S.adult;return s?" · Spicy 18+ (passing is always okay)":""};
+
+/* ---------- online play: a small game server relays messages between phones ---------- */
+const API=window.TOD_SERVER||"";
+let ICE=[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"}];
+fetch(API+"/api/ice").then(r=>r.ok?r.json():null).then(j=>{if(j&&j.iceServers)ICE=j.iceServers}).catch(()=>{});
+const pcs={},pend={};
+let sq=Promise.resolve();
+const send=(to,data)=>{if(!O.room||!O.me)return;const b=JSON.stringify({room:O.room,id:O.me,to,data});sq=sq.then(()=>fetch(API+"/api/send",{method:"POST",headers:{"Content-Type":"application/json"},body:b})).catch(()=>{})};
+const api=(p,b)=>fetch(API+p,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()});
+const mine=()=>{const p=O.st.players[O.st.turn];return !!p&&p.id===O.me};
+const bc=()=>{O.st.sp=S.level==="spicy"&&O.st.players.every(p=>p.a);O.st.v=(O.st.v||0)+1;send("*",{t:"state",st:O.st});renderSetup();renderTurn()};
+function oname(){const n=(($("#oname")||{}).value||S.myname||"").trim()||"Player";S.myname=n;save();return n}
+function reset(){
+  if(O.stream)O.stream.getTracks().forEach(t=>t.stop());
+  Object.keys(pcs).forEach(k=>{try{pcs[k].close()}catch(e){}delete pcs[k]});
+  const cm=$("#cams");if(cm)cm.innerHTML="";document.body.classList.remove("hascam");
+  if(O.es)O.es.close();
+  if(O.room&&O.me){try{fetch(API+"/api/leave",{method:"POST",keepalive:true,headers:{"Content-Type":"application/json"},body:JSON.stringify({room:O.room,id:O.me})})}catch(e){}}
+  Object.assign(O,{st:{players:[],turn:0,card:null},host:false,me:null,room:null,es:null,code:"",status:"",stream:null});
+}
+addEventListener("pagehide",()=>{if(O.room&&O.me&&navigator.sendBeacon)navigator.sendBeacon(API+"/api/leave",new Blob([JSON.stringify({room:O.room,id:O.me})],{type:"application/json"}))});
+function pick(k){const a=poolOf(k);return a.length?a[Math.floor(Math.random()*a.length)]:"No prompts in this deck yet. Add your own on the last slide."}
+function renderLobby(){
+  const el=$("#plist");
+  if(O.code){el.innerHTML=`<div class="lbl">Game code</div><div style="font:400 46px Anton,Impact,sans-serif;letter-spacing:.2em;text-align:center">${esc(O.code)}</div><p class="muted" style="text-align:center">${O.host?"Share this code with your friends.":"Connected to the host."}</p>`+shareHtml()+O.st.players.map(p=>`<div class="item"><span>${esc(p.name)}${p.id===O.me?" (you)":""}</span></div>`).join("")+(O.host&&S.level==="spicy"&&!O.st.players.every(p=>p.a)?'<p class="muted">Spicy stays off until every player ticks “I’m 18 or older”.</p>':"")+'<button class="ghost" id="leave">Leave game</button>';return}
+  el.innerHTML=`<input type="text" id="oname" maxlength="18" placeholder="Your name" value="${esc(S.myname||"")}"><div class="pick gp">${[["boy","Boy"],["girl","Girl"]].map(([k,l])=>`<button data-og="${k}" class="${S.mygender===k?"on":""}">${l}</button>`).join("")}</div><label class="tg"><input type="checkbox" id="oadult" ${S.adult?"checked":""}> I’m 18 or older</label><button class="btn red" id="host">Host a game</button><div class="row"><input type="text" id="ocode" maxlength="4" placeholder="Friend’s code" value="${esc(O.pre||"")}" style="text-transform:uppercase"><button class="btn" style="background:var(--ink);color:var(--bg);width:auto" id="join">Join</button></div><p class="muted">${esc(O.status)}</p>`;
+}
+function fail(m){reset();O.status=m||"Could not join. Check the code and your connection.";renderSetup();renderTurn()}
+function connect(){
+  const es=O.es=new EventSource(`${API}/api/events?room=${O.room}&id=${O.me}`);
+  es.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(x){return}if(m.sys)onsys(m);else onmsg(m.from,m.data)};
+  es.onerror=()=>{if(es.readyState===2&&O.es===es)fail(O.host?"Lost connection to the game server.":"The game ended or the connection was lost.")};
+}
+function onsys(m){
+  if(m.sys==="ready"&&!O.host){O.code=O.room;send(O.st.hostId,Object.assign({t:"hello"},O.hello));renderSetup();renderTurn();show("home")}
+  else if(m.sys==="join"&&O.host)bc();
+  else if(m.sys==="leave"){if(O.host)drop(m.id);else if(m.id===O.st.hostId)fail("The host ended the game.");else closeRtc(m.id)}
+}
+function onmsg(from,m){
+  if(!m||typeof m!=="object")return;
+  if(m.t==="rtc")return onrtc(from,m);
+  if(O.host)hdata(from,m);
+  else if(m.t==="state"&&m.st&&(m.st.v||0)>=(O.st.v||0)){O.st=m.st;renderSetup();renderTurn()}
+  else if(m.t==="full")fail("That game is full.");
+}
+async function host(n){
+  n=n||oname();reset();O.status="Starting…";renderSetup();
+  try{
+    const r=await api("/api/host",{});
+    O.host=true;O.me=r.id;O.room=r.code;O.code=r.code;O.st.hostId=r.id;O.st.players=[{id:r.id,name:n,g:S.mygender||"",a:!!S.adult}];O.status="";connect();
+  }catch(e){reset();O.status="Could not reach the game server. Try again in a minute."}
+  renderSetup();renderTurn();
+}
+function hdata(from,m){
+  if(m.t==="hello"){
+    if(!O.st.players.some(p=>p.id===from)){
+      if(O.st.players.length>=10){send(from,{t:"full"});return}
+      O.st.players.push({id:from,name:String(m.name||"Player").slice(0,18),g:m.g==="boy"||m.g==="girl"?m.g:"",a:m.a===true});
+    }
+    bc();return;
+  }
+  const cp=O.st.players[O.st.turn];if(!cp||cp.id!==from)return;
+  if(m.t==="draw"&&(m.k==="truth"||m.k==="dare")){O.st.card={k:m.k,t:pick(m.k)};bc()}
+  else if(m.t==="next")adv();
+}
+function adv(){O.st.turn=(O.st.turn+1)%O.st.players.length;O.st.card=null;bc()}
+function drop(id){
+  closeRtc(id);const i=O.st.players.findIndex(p=>p.id===id);if(i<0)return;
+  O.st.players.splice(i,1);if(i<O.st.turn)O.st.turn--;O.st.turn%=O.st.players.length||1;O.st.card=null;bc();
+}
+async function join(){
+  const n=oname(),code=(($("#ocode")||{}).value||"").trim().toUpperCase();
+  if(code.length!==4)return;
+  reset();O.status="Connecting…";renderSetup();
+  try{
+    const r=await api("/api/join",{code});
+    O.room=code;O.me=r.id;O.st.hostId=r.host;O.hello={name:n,g:S.mygender||"",a:!!S.adult};connect();
+    setTimeout(()=>{if(O.room===code&&!O.code)fail()},12000);
+  }catch(e){fail(e.message==="404"?"No game with that code.":e.message==="409"?"That game is full.":"Could not reach the game server.")}
+}
+function leave(){reset();renderSetup();renderTurn()}
+function toast(){$$(".who").forEach(w=>w.textContent="Not your turn yet");setTimeout(renderTurn,1400)}
+function odraw(k){
+  if(!O.code)return go(0);
+  if(!mine())return toast();
+  if(O.host){O.st.card={k,t:pick(k)};bc()}else send(O.st.hostId,{t:"draw",k});
+}
+function onext(){if(!O.code)return go(0);if(O.host)adv();else if(mine())send(O.st.hostId,{t:"next"})}
+
+/* ---------- live call: join the call, then switch camera and mic on or off ---------- */
+const nameOf=id=>{const p=O.st.players.find(p=>p.id===id);return p?p.name:"Player"};
+function flag(){document.body.classList.toggle("hascam",!!O.stream&&$("#cams").children.length>0)}
+function tile(pid,s){
+  let d=document.getElementById("t-"+pid);
+  if(!d){d=document.createElement("div");d.id="t-"+pid;d.className="tile";d.innerHTML="<video autoplay playsinline></video><b></b>";$("#cams").appendChild(d)}
+  const v=d.firstChild;v.muted=pid==="me"||!O.stream;if(v.srcObject!==s)v.srcObject=s;
+  d.lastChild.textContent=pid==="me"?"You":nameOf(pid);v.play&&v.play().catch(()=>{});flag();
+}
+function untile(pid){const d=document.getElementById("t-"+pid);if(d)d.remove();flag()}
+function mk(key,id,out){
+  const pc=new RTCPeerConnection({iceServers:ICE});pcs[key]=pc;
+  pc.onicecandidate=e=>{if(e.candidate)send(id,{t:"rtc",k:"ice",o:out,c:e.candidate})};
+  if(!out)pc.ontrack=e=>{if(e.streams[0])tile(id,e.streams[0])};
+  pc.onconnectionstatechange=()=>{if(pc.connectionState==="failed"||pc.connectionState==="closed"){if(pcs[key]===pc)delete pcs[key];if(!out)untile(id)}};
+  return pc;
+}
+async function callPeer(id){
+  const key="out:"+id;if(pcs[key]||!O.stream)return;
+  const pc=mk(key,id,true);O.stream.getTracks().forEach(t=>pc.addTrack(t,O.stream));
+  try{await pc.setLocalDescription(await pc.createOffer());send(id,{t:"rtc",k:"offer",sdp:pc.localDescription})}catch(e){if(pcs[key]===pc)delete pcs[key]}
+}
+function flush(key){const pc=pcs[key];(pend[key]||[]).splice(0).forEach(c=>pc&&pc.addIceCandidate(c).catch(()=>{}))}
+async function onrtc(from,m){
+  try{
+    if(m.k==="offer"){
+      const key="in:"+from;if(pcs[key])pcs[key].close();
+      const pc=mk(key,from,false);await pc.setRemoteDescription(m.sdp);flush(key);
+      await pc.setLocalDescription(await pc.createAnswer());send(from,{t:"rtc",k:"answer",sdp:pc.localDescription});
+    }else if(m.k==="answer"){const pc=pcs["out:"+from];if(pc){await pc.setRemoteDescription(m.sdp);flush("out:"+from)}}
+    else if(m.k==="ice"){const key=(m.o?"in:":"out:")+from,pc=pcs[key];if(pc&&pc.remoteDescription)await pc.addIceCandidate(m.c).catch(()=>{});else(pend[key]=pend[key]||[]).push(m.c)}
+    else if(m.k==="bye"){const pc=pcs["in:"+from];if(pc){pc.close();delete pcs["in:"+from]}untile(from)}
+  }catch(e){}
+}
+function closeRtc(id){["in:","out:"].forEach(p=>{const pc=pcs[p+id];if(pc){try{pc.close()}catch(e){}delete pcs[p+id]}});untile(id)}
+function sync(){
+  if(!O.room||!O.code)return;
+  const ids=O.st.players.map(p=>p.id);
+  $$("#cams .tile").forEach(d=>{const id=d.id.slice(2);if(id!=="me"&&!ids.includes(id))untile(id)});
+  Object.keys(pcs).forEach(k=>{const id=k.slice(k.indexOf(":")+1);if(!ids.includes(id)){try{pcs[k].close()}catch(e){}delete pcs[k]}});
+  if(O.stream)ids.forEach(id=>{if(id!==O.me)callPeer(id)});
+}
+function camb(){
+  const on=S.mode==="online",st=O.stream;
+  $("#callbar").hidden=!(on&&O.code);
+  $("#callb").textContent=st?"Leave call":"Join call";$("#callb").classList.toggle("live",!!st);
+  const vt=st&&st.getVideoTracks()[0],at=st&&st.getAudioTracks()[0];
+  $("#camt").hidden=!vt;$("#mict").hidden=!at;
+  if(vt){$("#camt").textContent=vt.enabled?"Camera on":"Camera off";$("#camt").classList.toggle("live",vt.enabled)}
+  if(at){$("#mict").textContent=at.enabled?"Mic on":"Mic off";$("#mict").classList.toggle("live",at.enabled)}
+  $("#cams").style.display=on&&st?"flex":"none";
+  $$("#cams .tile").forEach(d=>{if(d.id!=="t-me")d.firstChild.muted=!st});
+  document.body.classList.toggle("hasbar",on&&!!O.code);flag();
+}
+async function call(){
+  if(O.stream)return leaveCall();
+  try{O.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:480}},audio:{echoCancellation:true,noiseSuppression:true}})}
+  catch(e){try{O.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}})}
+    catch(e2){alert("Microphone and camera access was blocked. Allow them for this site in your browser settings, then try again.");return}}
+  O.stream.getVideoTracks().forEach(t=>t.enabled=false);
+  tile("me",O.stream);camb();sync();
+}
+function leaveCall(){
+  O.stream.getTracks().forEach(t=>t.stop());O.stream=null;
+  Object.keys(pcs).filter(k=>k.startsWith("out:")).forEach(k=>{send(k.slice(4),{t:"rtc",k:"bye"});try{pcs[k].close()}catch(e){}delete pcs[k]});
+  untile("me");camb();
+}
+function tog(v){if(!O.stream)return;(v?O.stream.getVideoTracks():O.stream.getAudioTracks()).forEach(t=>t.enabled=!t.enabled);camb()}
+$("#callb").onclick=call;$("#camt").onclick=()=>tog(true);$("#mict").onclick=()=>tog(false);
+/* ---------- QR code (byte mode, error correction L, versions 1 to 9) ---------- */
+function qrMatrix(text){
+  const data=Array.from(new TextEncoder().encode(text));
+  const T={1:[19,7,1],2:[34,10,1],3:[55,15,1],4:[80,20,1],5:[108,26,1],6:[136,18,2],7:[156,20,2],8:[194,24,2],9:[232,30,2]};
+  const AL={1:[],2:[6,18],3:[6,22],4:[6,26],5:[6,30],6:[6,34],7:[6,22,38],8:[6,24,42],9:[6,26,46]};
+  let v=1;while(v<=9&&data.length>T[v][0]-2)v++;
+  if(v>9)return null;
+  const [dcw,ecn,nb]=T[v],n=17+4*v;
+  const bits=[];const put=(x,l)=>{for(let i=l-1;i>=0;i--)bits.push((x>>>i)&1)};
+  put(4,4);put(data.length,8);data.forEach(b=>put(b,8));
+  for(let i=0;i<4&&bits.length<dcw*8;i++)bits.push(0);
+  while(bits.length%8)bits.push(0);
+  const cw=[];for(let i=0;i<bits.length;i+=8){let b=0;for(let j=0;j<8;j++)b=b<<1|bits[i+j];cw.push(b)}
+  for(let p=0xEC;cw.length<dcw;p^=0xEC^0x11)cw.push(p);
+  const ex=new Array(512),lg=new Array(256);
+  for(let i=0,x=1;i<255;i++){ex[i]=x;lg[x]=i;x<<=1;if(x&256)x^=0x11D}
+  for(let i=255;i<512;i++)ex[i]=ex[i-255];
+  const mul=(a,b)=>a&&b?ex[lg[a]+lg[b]]:0;
+  let g=[1];for(let i=0;i<ecn;i++){const ng=new Array(g.length+1).fill(0);g.forEach((c,j)=>{ng[j]^=c;ng[j+1]^=mul(c,ex[i])});g=ng}
+  const bs=dcw/nb,blocks=[],ecs=[];
+  for(let b=0;b<nb;b++){
+    const d=cw.slice(b*bs,(b+1)*bs),r=new Array(ecn).fill(0);
+    d.forEach(x=>{const f=x^r[0];r.shift();r.push(0);if(f)g.slice(1).forEach((c,j)=>r[j]^=mul(c,f))});
+    blocks.push(d);ecs.push(r);
+  }
+  const all=[];for(let i=0;i<bs;i++)blocks.forEach(b=>all.push(b[i]));
+  for(let i=0;i<ecn;i++)ecs.forEach(e=>all.push(e[i]));
+  const stream=[];all.forEach(b=>put2(b));function put2(b){for(let i=7;i>=0;i--)stream.push((b>>>i)&1)}
+  const rem=v===1?0:v<=6?7:0;for(let i=0;i<rem;i++)stream.push(0);
+  const m=Array.from({length:n},()=>new Array(n).fill(false)),fn=Array.from({length:n},()=>new Array(n).fill(false));
+  const set=(x,y,d)=>{m[y][x]=d;fn[y][x]=true};
+  for(let i=0;i<n;i++){set(6,i,i%2===0);set(i,6,i%2===0)}
+  const finder=(cx,cy)=>{for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++){const x=cx+dx,y=cy+dy;if(x<0||y<0||x>=n||y>=n)continue;const d=Math.max(Math.abs(dx),Math.abs(dy));set(x,y,d!==2&&d!==4)}};
+  finder(3,3);finder(n-4,3);finder(3,n-4);
+  const al=AL[v];
+  al.forEach((cy,i)=>al.forEach((cx,j)=>{if((i===0&&j===0)||(i===0&&j===al.length-1)||(i===al.length-1&&j===0))return;for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)set(cx+dx,cy+dy,Math.max(Math.abs(dx),Math.abs(dy))!==1)}));
+  const fmt=mask=>{
+    const d=(1<<3)|mask;let r=d;for(let i=0;i<10;i++)r=(r<<1)^((r>>>9)*0x537);
+    const b=((d<<10)|r)^0x5412,gb=i=>((b>>>i)&1)!==0;
+    for(let i=0;i<=5;i++)set(8,i,gb(i));set(8,7,gb(6));set(8,8,gb(7));set(7,8,gb(8));for(let i=9;i<15;i++)set(14-i,8,gb(i));
+    for(let i=0;i<8;i++)set(n-1-i,8,gb(i));for(let i=8;i<15;i++)set(8,n-15+i,gb(i));set(8,n-8,true);
+  };
+  fmt(0);
+  if(v>=7){let r=v;for(let i=0;i<12;i++)r=(r<<1)^((r>>>11)*0x1F25);const b=(v<<12)|r;for(let i=0;i<18;i++){const d=((b>>>i)&1)!==0,a=n-11+i%3,c=Math.floor(i/3);set(a,c,d);set(c,a,d)}}
+  let k=0;
+  for(let right=n-1;right>=1;right-=2){if(right===6)right=5;for(let vert=0;vert<n;vert++)for(let j=0;j<2;j++){const x=right-j,up=((right+1)&2)===0,y=up?n-1-vert:vert;if(!fn[y][x]&&k<stream.length){m[y][x]=stream[k]===1;k++}}}
+  const MASK=[(x,y)=>(x+y)%2===0,(x,y)=>y%2===0,(x,y)=>x%3===0,(x,y)=>(x+y)%3===0,(x,y)=>(Math.floor(x/3)+Math.floor(y/2))%2===0,(x,y)=>x*y%2+x*y%3===0,(x,y)=>(x*y%2+x*y%3)%2===0,(x,y)=>((x+y)%2+x*y%3)%2===0];
+  const pat=[1,0,1,1,1,0,1];
+  const pen=q=>{let p=0;
+    for(let t=0;t<2;t++)for(let a=0;a<n;a++){let run=1;for(let b=1;b<n;b++){const c=t?q[b][a]:q[a][b],d=t?q[b-1][a]:q[a][b-1];if(c===d){run++;if(run===5)p+=3;else if(run>5)p++}else run=1}}
+    for(let y=0;y<n-1;y++)for(let x=0;x<n-1;x++){const c=q[y][x];if(c===q[y][x+1]&&c===q[y+1][x]&&c===q[y+1][x+1])p+=3}
+    for(let t=0;t<2;t++)for(let a=0;a<n;a++)for(let b=0;b+6<n;b++){let ok=true;for(let i=0;i<7;i++){const c=t?q[b+i][a]:q[a][b+i];if((c?1:0)!==pat[i]){ok=false;break}}if(ok)p+=40}
+    let dk=0;q.forEach(r=>r.forEach(c=>{if(c)dk++}));return p+Math.floor(Math.abs(dk*20-n*n*10)/(n*n))*10};
+  let best=null,bp=1e9;
+  for(let mk=0;mk<8;mk++){
+    const save=m.map(r=>r.slice());
+    for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(!fn[y][x]&&MASK[mk](x,y))m[y][x]=!m[y][x];
+    fmt(mk);const s=pen(m);if(s<bp){bp=s;best=m.map(r=>r.slice())}
+    for(let y=0;y<n;y++)m[y]=save[y];
+  }
+  return best;
+}
+function qrSvg(text){
+  const q=qrMatrix(text);if(!q)return "";
+  const n=q.length;let d="";
+  q.forEach((r,y)=>{let x=0;while(x<n){if(r[x]){let e=x;while(e<n&&r[e])e++;d+=`M${x+4} ${y+4}h${e-x}v1h-${e-x}z`;x=e}else x++}});
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n+8} ${n+8}" shape-rendering="crispEdges" role="img" aria-label="QR code to join the game"><rect width="${n+8}" height="${n+8}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
+}
+
+/* ---------- invite link, copy, share and QR ---------- */
+const link=()=>location.href.split(/[?#]/)[0]+"?join="+O.code;
+function shareHtml(){
+  if(!O.code)O.qr=false;
+  const l=link(),q=O.qr?qrSvg(l):"";
+  return `<div class="row2"><button class="btn red sm" id="copy">Copy link</button><button class="btn sm" id="qrb" style="background:var(--ink);color:var(--bg)">${O.qr?"Hide QR":"Show QR"}</button>${navigator.share?'<button class="btn sm" id="shr" style="background:var(--ink);color:var(--bg)">Share</button>':""}</div><p class="muted" style="text-align:center;word-break:break-all;font-size:13px">${esc(l)}</p>`+(q?`<div style="display:flex;justify-content:center"><div style="width:min(240px,70vw)">${q}</div></div><p class="muted" style="text-align:center">Friends can scan this with their phone camera.</p>`:"");
+}
+async function copyLink(){
+  const l=link();
+  try{await navigator.clipboard.writeText(l)}catch(e){const t=document.createElement("textarea");t.value=l;document.body.appendChild(t);t.select();try{document.execCommand("copy")}catch(x){}t.remove()}
+  const b=$("#copy");if(b){b.textContent="Link copied";setTimeout(()=>{const c=$("#copy");if(c)c.textContent="Copy link"},1500)}
+}
+function shareLink(){if(navigator.share)navigator.share({title:"Truth or Dare",text:"Join my Truth or Dare game",url:link()}).catch(()=>{})}
+let START=null;
+try{const j=new URLSearchParams(location.search).get("join");if(j&&/^[A-Za-z]{4}$/.test(j)){S.mode="online";O.pre=j.toUpperCase();START="s-players"}}catch(e){}
+
+all();
+if(START)show(START);
+</script>
+<script>if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));</script>
+</body>
+</html>
